@@ -1,0 +1,237 @@
+// JDU Backend — Entity Relationship Diagram
+// Import at https://dbdiagram.io/d  or use with dbdocs.io
+// Generated from Django models (core, academics, news, careers, admissions, services)
+
+Project jdu_backend {
+  database_type: 'PostgreSQL'
+  Note: 'Al Jazeera Private University (JDU) — Django REST API'
+}
+
+// ─── Django Auth (built-in) ───────────────────────────────────────────────
+
+Table auth_user {
+  id integer [pk, increment]
+  username varchar(150) [unique, not null]
+  password varchar(128) [not null]
+  email varchar(254)
+  first_name varchar(150)
+  last_name varchar(150)
+  is_staff boolean [default: false, note: 'Required for dashboard JWT access']
+  is_superuser boolean [default: false]
+  is_active boolean [default: true]
+  date_joined datetime
+  last_login datetime
+}
+
+// ─── CORE ─────────────────────────────────────────────────────────────────
+
+Table core_university {
+  id integer [pk, increment]
+  name_ar varchar(255) [not null]
+  name_en varchar(255) [not null]
+  location varchar(255) [not null]
+  email varchar(254) [not null]
+  phone varchar(20) [not null]
+  logo varchar(100) [note: 'ImageField → /media/university/']
+}
+
+Table core_language {
+  id integer [pk, increment]
+  code varchar(10) [unique, not null, note: 'ar, en']
+  label varchar(50) [not null]
+}
+
+Table core_socialmedia {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  platform varchar(50) [not null, note: 'Facebook, Website, ...']
+  url varchar(200) [not null]
+}
+
+Table core_branch {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  name varchar(255) [not null]
+  address text [not null]
+  latitude decimal(9,6)
+  longitude decimal(9,6)
+}
+
+Table core_page {
+  id integer [pk, increment]
+  slug varchar(50) [unique, not null]
+  title_ar varchar(255) [not null]
+  title_en varchar(255) [not null]
+  content_ar text [not null]
+  content_en text [not null]
+  page_type varchar(20) [not null, default: 'custom', note: 'about | vision | policy | custom']
+}
+
+Table core_contactmessage {
+  id integer [pk, increment]
+  sender_name varchar(255) [not null]
+  sender_email varchar(254) [not null]
+  subject varchar(255) [not null]
+  message text [not null]
+  sent_at datetime [not null]
+  status varchar(20) [default: 'new']
+}
+
+// ─── ACADEMICS ────────────────────────────────────────────────────────────
+
+Table academics_college {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  name_ar varchar(255) [not null]
+  name_en varchar(255) [not null]
+  description text
+}
+
+Table academics_department {
+  id integer [pk, increment]
+  college_id integer [not null, ref: > academics_college.id]
+  name_ar varchar(255) [not null]
+  name_en varchar(255) [not null]
+}
+
+Table academics_program {
+  id integer [pk, increment]
+  department_id integer [not null, ref: > academics_department.id]
+  name_ar varchar(255) [not null]
+  name_en varchar(255) [not null]
+  level varchar(20) [not null, note: 'bachelor | master | phd | diploma']
+  study_plan varchar(100) [note: 'FileField → /media/study_plans/']
+}
+
+Table academics_academicstaff {
+  id integer [pk, increment]
+  department_id integer [not null, ref: > academics_department.id]
+  full_name varchar(255) [not null]
+  title varchar(100) [not null]
+  bio text [not null]
+  email varchar(254) [not null]
+  staff_type varchar(50) [not null, note: 'Academic | Administrative']
+  photo varchar(100) [note: 'ImageField → /media/staff/']
+}
+
+Table academics_research {
+  id integer [pk, increment]
+  staff_id integer [not null, ref: > academics_academicstaff.id]
+  title varchar(500) [not null]
+  abstract text [not null]
+  published_date date [not null]
+  url varchar(200)
+}
+
+// ─── NEWS ─────────────────────────────────────────────────────────────────
+
+Table news_news {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  title_ar varchar(255) [not null]
+  title_en varchar(255) [not null]
+  content text [not null]
+  publish_date date [not null]
+  image varchar(100) [not null, note: 'ImageField → /media/news/']
+}
+
+Table news_event {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  title_ar varchar(255) [not null]
+  title_en varchar(255) [not null]
+  event_date datetime [not null]
+  location varchar(255) [not null]
+  description text [not null]
+  image varchar(100) [not null, note: 'ImageField → /media/events/']
+}
+
+Table news_announcement {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  title varchar(255) [not null]
+  body text [not null]
+  date date [not null]
+}
+
+// ─── CAREERS ──────────────────────────────────────────────────────────────
+
+Table careers_jobposting {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  title varchar(255) [not null]
+  job_type varchar(50) [not null, note: 'Full-time | Part-time']
+  description text [not null]
+  requirements text [not null]
+  deadline date [not null]
+  status varchar(20) [default: 'open']
+}
+
+Table careers_jobapplication {
+  id integer [pk, increment]
+  job_id integer [not null, ref: > careers_jobposting.id]
+  applicant_name varchar(255) [not null]
+  applicant_email varchar(254) [not null]
+  cv varchar(100) [not null, note: 'FileField → /media/cvs/']
+  apply_date date [not null]
+  status varchar(20) [default: 'received']
+}
+
+// ─── ADMISSIONS ───────────────────────────────────────────────────────────
+
+Table admissions_student {
+  id integer [pk, increment]
+  full_name varchar(255) [not null]
+  email varchar(254) [unique, not null]
+  national_id varchar(20) [unique, not null]
+  status varchar(20) [default: 'active']
+}
+
+Table admissions_admission {
+  id integer [pk, increment]
+  program_id integer [unique, not null, ref: - academics_program.id, note: 'OneToOne — admission info per program']
+  requirements text [not null]
+  procedure text [not null]
+  tuition_fee decimal(10,2) [not null]
+  academic_calendar text [not null]
+}
+
+Table admissions_application {
+  id integer [pk, increment]
+  student_id integer [not null, ref: > admissions_student.id]
+  program_id integer [not null, ref: > academics_program.id]
+  apply_date date [not null]
+  status varchar(20) [default: 'pending', note: 'pending | accepted | rejected']
+  form_file varchar(100) [note: 'FileField → /media/applications/']
+}
+
+// ─── SERVICES ─────────────────────────────────────────────────────────────
+
+Table services_service {
+  id integer [pk, increment]
+  name_ar varchar(255) [not null]
+  name_en varchar(255) [not null]
+  service_type varchar(50) [not null, note: 'portal | library | lms']
+  url varchar(200)
+  description text [not null]
+}
+
+Table services_library {
+  id integer [pk, increment]
+  university_id integer [not null, ref: > core_university.id]
+  name varchar(255) [not null]
+  location varchar(255) [not null]
+  access_url varchar(200)
+}
+
+// ─── Relationship notes ───────────────────────────────────────────────────
+// University 1──* College, SocialMedia, Branch, News, Event, Announcement,
+//                JobPosting, Library
+// College 1──* Department
+// Department 1──* Program, AcademicStaff
+// AcademicStaff 1──* Research
+// Program 1──1 Admission (info)
+// Program 1──* Application (student applications)
+// Student 1──* Application
+// JobPosting 1──* JobApplication
+// Language, Page, Service, ContactMessage — standalone (no FK to University)

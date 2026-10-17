@@ -1,0 +1,4201 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-jdu-backend-api",
+    "name": "JDU Backend API",
+    "description": "**→ للداشبورد:** افتح **«0 — دليل سريع»** للبحث والترقيم، و**«9 — Dashboard CRUD كامل»** لطلبات **إضافة / تعديل / حذف** لكل الموارد.\n\n## البيئات (Environments)\n\n| البيئة | `base_url` | ملف Postman |\n|--------|------------|-------------|\n| **افتراضي (Railway)** | `https://jdubackend-production.up.railway.app` | المجموعة + `JDU_Backend_Railway.postman_environment.json` |\n| **محلي (اختياري)** | `http://localhost:8001` | غيّر **`base_url`** يدوياً |\n\n**Production URL:** `https://jdubackend-production.up.railway.app`\n\n## استخدام المجموعة\n\n1. **Import** المجموعة — **`base_url`** مضبوط على Railway.\n2. للتطوير المحلي: غيّر **`base_url`** إلى `http://localhost:8001`.\n3. للمسارات المحمية: نفّذ «1 — المصادقة» أو «0b — Railway Production → تسجيل الدخول».\n4. المسارات العامة (GET) تعمل بدون توken.\n5. رفع الملفات (multipart/form-data): طلبات التوظيف والقبول والصور.\n\n**اختبار Production سريع:** مجلد **«0b — Railway Production»** (يستخدم {{base_url}}).\n\n### لوحة التحكم (كل المحتوى قابل للإدارة)\nكلها تحت **`/api/v1/dashboard/`** وتتطلب مستخدم **`is_staff=True`** + JWT:\n- `.../dashboard/core/` — جامعة، لغات، سوشيال، فروع، صفحات، رسائل اتصال\n- `.../dashboard/academics/` — كليات، أقسام، برامج، كادر، بحث\n- `.../dashboard/news/` — مقالات، فعاليات، إعلانات\n- `.../dashboard/careers/` — إعلانات وظائف، طلبات توظيف\n- `.../dashboard/admissions/` — طلاب، معلومات قبول، طلبات انضمام\n- `.../dashboard/services/` — خدمات (`list`)، مكتبة (`library`)\n\nعلى كل قائمة: `search`, `ordering`, `page`, `page_size` + فلاتر حسب التطبيق.\n\n### ملخص الصلاحيات (الواجهة العامة)\n| النوع | الشرط |\n|------|--------|\n| قراءة معظم المحتوى | بدون توكن (GET) |\n| JWT | مستخدم مسجّل في Django (`/api/v1/token/`) |\n| طلاب / طلبات قبول (ما عدا الإنشاء العام) | JWT |\n| رسائل التواصل، طلبات الوظائف، طلبات القبول (عرض/تعديل/حذف) | staff أو مسارات عامة حسب التعريف |\n\n\n### ترقيم (Pagination) — عام و Dashboard\nكل قوائم GET تدعم: `page`, `page_size` (حتى 100). الرد: `{ count, next, previous, results }`.\n\n### Stats\n`GET /api/v1/dashboard/stats/` — JWT staff\n\n### طلب قبول عام (POST)\n```json\n{ \"full_name\": \"...\", \"email\": \"...\", \"national_id\": \"...\", \"program\": 1 }\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "sample_id",
+      "value": "1",
+      "description": "معرّف تجريبي للقوائم التفصيلية"
+    },
+    {
+      "key": "sample_slug",
+      "value": "about",
+      "description": "slug تجريبي لصفحة ثابتة"
+    },
+    {
+      "key": "base_url_local",
+      "value": "http://localhost:8001",
+      "description": "Local dev — change base_url to this value when needed"
+    }
+  ],
+  "item": [
+    {
+      "name": "0 — دليل سريع (بحث · ترقيم · إضافة خبر)",
+      "description": "**ابدأ من هنا.** الترقيم والبحث والفلترة على القوائم. **إنشاء خبر أو فعالية:** استخدم فقط **multipart** مع حقل **`image` إلزامي** (لا يُقبل JSON للإنشاء بدون صورة).\n\n**مهم:** نفّذ «1 — المصادقة» ثم انسخ `access` إلى `access_token`.",
+      "item": [
+        {
+          "name": "Health — فحص الخادم",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health/",
+            "description": "GET — بدون توken. Railway healthcheck + فحص سريع."
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ إضافة خبر — POST (multipart · صورة إلزامية)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/dashboard/news/articles/",
+            "description": "**الطريقة الوحيدة المدعومة للإنشاء:** `form-data` مع `university`, `title_ar`, `title_en`, `content`, **`image` (ملف إلزامي)**.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "university",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "title_ar",
+                  "value": "خبر مع صورة",
+                  "type": "text"
+                },
+                {
+                  "key": "title_en",
+                  "value": "News with image",
+                  "type": "text"
+                },
+                {
+                  "key": "content",
+                  "value": "النص...",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ إضافة فعالية — POST (multipart · صورة إلزامية)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "university",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "title_ar",
+                  "value": "فعالية",
+                  "type": "text"
+                },
+                {
+                  "key": "title_en",
+                  "value": "Event",
+                  "type": "text"
+                },
+                {
+                  "key": "event_date",
+                  "value": "2026-06-01T10:00:00Z",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "قاعة",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "تفاصيل",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "إلزامي"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/dashboard/news/events/",
+            "description": "**إنشاء فعالية:** نفس المسار تحت الداشبورد — **`image`** إلزامي."
+          },
+          "response": []
+        },
+        {
+          "name": "ترقيم (pagination) — page + page_size",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/news/articles/?page=2&page_size=10&ordering=-publish_date",
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2",
+                  "description": "رقم الصفحة"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10",
+                  "description": "عدد العناصر (افتراضي السيرفر 20، أقصى 100)"
+                },
+                {
+                  "key": "ordering",
+                  "value": "-publish_date",
+                  "description": "فرز تنازلي حسب تاريخ النشر"
+                }
+              ]
+            },
+            "description": "**الرد:** `count`, `next`, `previous`, `results`."
+          },
+          "response": []
+        },
+        {
+          "name": "بحث (search) في العنوان والمحتوى",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/news/articles/?search=مؤتمر&page=1",
+              "query": [
+                {
+                  "key": "search",
+                  "value": "مؤتمر",
+                  "description": "يبحث في title_ar, title_en, content"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "غيّر قيمة **search** كما تريد."
+          },
+          "response": []
+        },
+        {
+          "name": "فلترة — جامعة + تاريخ النشر",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/news/articles/?university=1&publish_date_from=2026-01-01&publish_date_to=2026-12-31",
+              "query": [
+                {
+                  "key": "university",
+                  "value": "1",
+                  "description": "معرّف الجامعة"
+                },
+                {
+                  "key": "publish_date_from",
+                  "value": "2026-01-01",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "publish_date_to",
+                  "value": "2026-12-31",
+                  "description": "YYYY-MM-DD"
+                }
+              ]
+            },
+            "description": "يمكن الجمع مع search و page في نفس الطلب."
+          },
+          "response": []
+        },
+        {
+          "name": "تعديل خبر — PATCH",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/dashboard/news/articles/{{sample_id}}/",
+            "description": "حدّث `sample_id` بمعرّف حقيقي من القائمة.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title_ar\": \"عنوان بعد التعديل\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "حذف خبر — DELETE",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/dashboard/news/articles/{{sample_id}}/",
+            "description": "احذف بالمعرف."
+          },
+          "response": []
+        },
+        {
+          "name": "📖 مرجع: باراميترات أي قائمة في الداشبورد",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/dashboard/news/articles/",
+            "description": "**تنطبق على أغلب مسارات GET تحت** `/api/v1/dashboard/...`\n\n| المعامل | المعنى |\n|---------|--------|\n| `page` | رقم الصفحة |\n| `page_size` | حجم الصفحة (حتى 100) |\n| `search` | بحث (الحقول تختلف حسب المورد) |\n| `ordering` | فرز، مثل `-publish_date` |\n\nفلاتر إضافية حسب الجدول (مثل `university`, `publish_date_from`). تفاصيلها في مجلدات **8.1–8.6** أو في `filters.py` بالمشروع."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "0b — Railway Production (jdubackend-production)",
+      "description": "اختبار سريع على **Production**.\n\nيستخدم **`{{base_url}}`** = `https://jdubackend-production.up.railway.app`.\n\n**اختبار كامل:** اختر بيئة **JDU Backend — Railway** — كل الطلبات تعمل على Production.\n\n**ترتيب:** Health → تسجيل الدخول (يحفظ التوكن) → Dashboard stats.",
+      "item": [
+        {
+          "name": "✅ Health — Production",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health/",
+            "description": "GET `https://jdubackend-production.up.railway.app/api/v1/health/` — بدون توken."
+          },
+          "response": []
+        },
+        {
+          "name": "University — قائمة (Production)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/info/?page=1&page_size=20",
+            "description": "GET عام — بدون توken."
+          },
+          "response": []
+        },
+        {
+          "name": "News articles — قائمة (Production)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/news/articles/?page=1&page_size=20",
+            "description": "GET عام — بدون توken."
+          },
+          "response": []
+        },
+        {
+          "name": "Academics colleges — قائمة (Production)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/academics/colleges/?page=1&page_size=20",
+            "description": "GET عام — بدون توken."
+          },
+          "response": []
+        },
+        {
+          "name": "Careers postings — قائمة (Production)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/careers/postings/?page=1&page_size=20",
+            "description": "GET عام — بدون توken."
+          },
+          "response": []
+        },
+        {
+          "name": "🔐 تسجيل الدخول — Production (يحفظ التوكن)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (pm.response.code === 200 && json.access) {",
+                  "    pm.environment.set('access_token', json.access);",
+                  "    pm.collectionVariables.set('access_token', json.access);",
+                  "    if (json.refresh) {",
+                  "        pm.environment.set('refresh_token', json.refresh);",
+                  "        pm.collectionVariables.set('refresh_token', json.refresh);",
+                  "    }",
+                  "    console.log('Tokens saved to access_token / refresh_token');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your_password\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/token/",
+            "description": "**POST** `https://jdubackend-production.up.railway.app/api/v1/token/`\n\nغيّر `password` بكلمة مرور superuser على Railway.\n\n**Tests:** يحفظ `access` و `refresh` في المتغيرات."
+          },
+          "response": []
+        },
+        {
+          "name": "Dashboard stats — Production (JWT)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{base_url}}/api/v1/dashboard/stats/",
+            "description": "GET — JWT + is_staff. نفّذ تسجيل الدخول أولاً."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1 — المصادقة (JWT)",
+      "description": "إصدار توكن الوصول والتجديد. الاستجابة تحتوي `access` و `refresh`. انسخ `access` إلى المتغير `access_token`.",
+      "item": [
+        {
+          "name": "تسجيل الدخول — إصدار توكن",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your_username\",\n  \"password\": \"your_password\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/token/",
+            "description": "**POST** `/api/v1/token/`\n\nيُرجع JWT:\n- `access`: يُرسل في الهيدر `Authorization: Bearer <access>` للمسارات المحمية.\n- `refresh`: لتحديث الـ access عبر `/api/v1/token/refresh/`.\n\nالمستخدمون من جدول مستخدمي Django (يُنشؤون من لوحة الإدارة أو `createsuperuser`)."
+          },
+          "response": []
+        },
+        {
+          "name": "تحديث التوكن (Refresh)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/token/refresh/",
+            "description": "**POST** `/api/v1/token/refresh/`\n\nBody: `{ \"refresh\": \"<refresh_token>\" }`\n\nيُرجع `access` جديد (مدة الـ access مضبوطة في الإعدادات، مثلاً 60 دقيقة)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2 — Core (معلومات الجامعة، لغات، صفحات، اتصل بنا)",
+      "item": [
+        {
+          "name": "University — قائمة",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/info/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/core/info/`\n\nقراءة فقط. قائمة سجلات الجامعة (عادة سجل واحد لموقع جامعة واحدة).\n\nيتضمن الحقول المتداخلة للقراءة: `social_links`, `branches`.\n\n**مصادقة:** غير مطلوبة."
+          },
+          "response": []
+        },
+        {
+          "name": "University — تفاصيل",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/info/{{sample_id}}/",
+            "description": "**GET** `/api/v1/core/info/{id}/`\n\nتفاصيل جامعة بالمعرّف الرقمي.\n\n**مصادقة:** غير مطلوبة."
+          },
+          "response": []
+        },
+        {
+          "name": "Languages — قائمة",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/languages/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/core/languages/`\n\nاللغات المتاحة للموقع (مثل `code`, `label`).\n\n**مصادقة:** غير مطلوبة."
+          },
+          "response": []
+        },
+        {
+          "name": "Languages — تفاصيل",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/languages/{{sample_id}}/",
+            "description": "**GET** `/api/v1/core/languages/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Pages — قائمة",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/pages/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/core/pages/`\n\nصفحات ثابتة (عن الجامعة، الرؤية، سياسات، …) — الحقل `page_type` يحدد النوع."
+          },
+          "response": []
+        },
+        {
+          "name": "Pages — تفاصيل بالـ slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/pages/{{sample_slug}}/",
+            "description": "**GET** `/api/v1/core/pages/{slug}/`\n\n⚠️ التفاصيل بالـ **slug** وليس بالرقم (`lookup_field = slug`).\n\nمثال: `about`, `vision`."
+          },
+          "response": []
+        },
+        {
+          "name": "Contact — قائمة الرسائل",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/contact/",
+            "description": "**GET** `/api/v1/core/contact/`\n\nعرض كل رسائل «اتصل بنا». **يتطلب مستخدم Admin** (JWT)."
+          },
+          "response": []
+        },
+        {
+          "name": "Contact — إنشاء رسالة (زائر)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sender_name\": \"اسم المرسل\",\n  \"sender_email\": \"email@example.com\",\n  \"subject\": \"عنوان الرسالة\",\n  \"message\": \"نص الرسالة\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/core/contact/",
+            "description": "**POST** `/api/v1/core/contact/`\n\nإرسال رسالة من نموذج الموقع. **عام — بدون توكن.**\n\nالحقول: `sender_name`, `sender_email`, `subject`, `message`. الحقول `sent_at`, `status` تُحدَّد من الخادم."
+          },
+          "response": []
+        },
+        {
+          "name": "Contact — تفاصيل رسالة",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/contact/{{sample_id}}/",
+            "description": "**GET** `/api/v1/core/contact/{id}/` — **Admin**"
+          },
+          "response": []
+        },
+        {
+          "name": "Contact — تعديل كامل PUT",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sender_name\": \"اسم المرسل\",\n  \"sender_email\": \"email@example.com\",\n  \"subject\": \"عنوان\",\n  \"message\": \"نص\",\n  \"status\": \"read\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/core/contact/{{sample_id}}/",
+            "description": "**PUT** — تحديث كامل — **Admin**"
+          },
+          "response": []
+        },
+        {
+          "name": "Contact — تعديل جزئي PATCH",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"read\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/core/contact/{{sample_id}}/",
+            "description": "**PATCH** — مثلاً تحديث `status` — **Admin**"
+          },
+          "response": []
+        },
+        {
+          "name": "Contact — حذف",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/api/v1/core/contact/{{sample_id}}/",
+            "description": "**DELETE** — **Admin**"
+          },
+          "response": []
+        },
+        {
+          "name": "social-media — قائمة (عام)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/core/social-media/?page=1&page_size=20&search=&university=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "core",
+                "social-media"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "university",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "GET عام — وسائل التواصل. pagination + search + university filter."
+          },
+          "response": []
+        },
+        {
+          "name": "branches — قائمة (عام)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/core/branches/?page=1&page_size=20&search=&university=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "core",
+                "branches"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "university",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "GET عام — الفروع. pagination + search + university filter."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 — Academics (كليات، أقسام، برامج، كادر، بحث)",
+      "description": "كل المسارات **قراءة فقط** (GET). التعديل يتم عادة من لوحة Django Admin.",
+      "item": [
+        {
+          "name": "Colleges — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/colleges/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/academics/colleges/` — كليات مرتبطة بـ `university`."
+          },
+          "response": []
+        },
+        {
+          "name": "Colleges — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/colleges/{{sample_id}}/",
+            "description": "**GET** `/api/v1/academics/colleges/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Departments — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/departments/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/academics/departments/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Departments — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/departments/{{sample_id}}/",
+            "description": "**GET** `/api/v1/academics/departments/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Programs — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/programs/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/academics/programs/` — يتضمن `level`, `study_plan` (ملف), القسم، إلخ."
+          },
+          "response": []
+        },
+        {
+          "name": "Programs — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/programs/{{sample_id}}/",
+            "description": "**GET** `/api/v1/academics/programs/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Staff — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/staff/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/academics/staff/` — الكادر الأكاديمي."
+          },
+          "response": []
+        },
+        {
+          "name": "Staff — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/staff/{{sample_id}}/",
+            "description": "**GET** `/api/v1/academics/staff/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Research — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/research/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/academics/research/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Research — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/academics/research/{{sample_id}}/",
+            "description": "**GET** `/api/v1/academics/research/{id}/`"
+          },
+          "response": []
+        }
+      ]
+    },
+     {
+      "name": "Ask Chatbot",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"ما هي شروط القبول؟\",\n  \"locale\": \"ar\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/chatbot_ask/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["chatbot_ask", ""]
+        }
+      }
+    },
+    {
+      "name": "4 — News (أخبار، فعاليات، إعلانات)",
+      "description": "واجهة **عامة** (بدون JWT). **بحث:** `search` في العناوين والمحتوى. **فلترة:** `university`, تواريخ (`publish_date_*`, `event_date_*`, `date_*`). **فعاليات:** فلتر **`location`** (بحث جزئي عن المكان). **فرز:** `ordering`. **الأخبار والفعاليات** تعرض **`image`** (إلزامي في قاعدة البيانات عند الإنشاء).",
+      "item": [
+        {
+          "name": "Articles — قائمة + بحث وفلترة",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/news/articles/?search=&university=&publish_date_from=&publish_date_to=&ordering=-publish_date",
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "في title_ar, title_en, content"
+                },
+                {
+                  "key": "university",
+                  "value": "",
+                  "description": "معرّف الجامعة"
+                },
+                {
+                  "key": "publish_date_from",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "publish_date_to",
+                  "value": "",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "ordering",
+                  "value": "-publish_date",
+                  "description": "مثال: publish_date، -publish_date، title_ar"
+                }
+              ]
+            },
+            "description": "**GET** `/api/v1/news/articles/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Articles — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/news/articles/{{sample_id}}/",
+            "description": "يتضمن حقل `image` (مسار الملف)."
+          },
+          "response": []
+        },
+        {
+          "name": "Events — قائمة + بحث وفلترة + مكان",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/news/events/?search=&university=&location=&event_date_from=&event_date_to=&ordering=event_date",
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "عناوين ووصف وموقع"
+                },
+                {
+                  "key": "university",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "location",
+                  "value": "",
+                  "description": "بحث جزئي عن النص في حقل المكان"
+                },
+                {
+                  "key": "event_date_from",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "event_date_to",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "ordering",
+                  "value": "event_date",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "**GET** `/api/v1/news/events/` — يتضمن **`image`**."
+          },
+          "response": []
+        },
+        {
+          "name": "Events — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/news/events/{{sample_id}}/",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Announcements — قائمة + بحث وفلترة",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/news/announcements/?search=&university=&date_from=&date_to=&ordering=-date",
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "في title و body"
+                },
+                {
+                  "key": "university",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": ""
+                },
+                {
+                  "key": "ordering",
+                  "value": "-date",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "**GET** `/api/v1/news/announcements/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Announcements — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/news/announcements/{{sample_id}}/",
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5 — Careers (وظائف وطلبات)",
+      "item": [
+        {
+          "name": "Job postings — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/careers/postings/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/careers/postings/` — الإعلانات مرتبة حسب `-deadline`."
+          },
+          "response": []
+        },
+        {
+          "name": "Job postings — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/careers/postings/{{sample_id}}/",
+            "description": "**GET** `/api/v1/careers/postings/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Job applications — قائمة",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/careers/applications/",
+            "description": "**GET** `/api/v1/careers/applications/` — **Admin فقط**."
+          },
+          "response": []
+        },
+        {
+          "name": "Job applications — تقديم (زائر، multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "job",
+                  "value": "1",
+                  "type": "text",
+                  "description": "معرّف الإعلان"
+                },
+                {
+                  "key": "applicant_name",
+                  "value": "الاسم الكامل",
+                  "type": "text"
+                },
+                {
+                  "key": "applicant_email",
+                  "value": "email@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "cv",
+                  "type": "file",
+                  "src": [],
+                  "description": "ملف السيرة PDF/DOC"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/careers/applications/",
+            "description": "**POST** `/api/v1/careers/applications/`\n\n**بدون توكن** — أي زائر يقدّم.\n\nBody: `multipart/form-data` — الحقول: `job` (ID), `applicant_name`, `applicant_email`, `cv` (ملف إجباري في النموذج).\n\n`apply_date`, `status` من الخادم."
+          },
+          "response": []
+        },
+        {
+          "name": "Job applications — تفاصيل",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/careers/applications/{{sample_id}}/",
+            "description": "**GET** — **Admin**"
+          },
+          "response": []
+        },
+        {
+          "name": "Job applications — PATCH",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"reviewed\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/careers/applications/{{sample_id}}/",
+            "description": "**PATCH** — **Admin**"
+          },
+          "response": []
+        },
+        {
+          "name": "Job applications — حذف",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/careers/applications/{{sample_id}}/",
+            "description": "**DELETE** — **Admin**"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6 — Admissions (طلاب، معلومات القبول، طلبات الالتحاق)",
+      "item": [
+        {
+          "name": "Students — قائمة",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admissions/students/",
+            "description": "**GET** `/api/v1/admissions/students/` — **JWT أي مستخدم مسجّل** (`IsAuthenticated`).\n\n**Admin فقط (is_staff + JWT).**"
+          },
+          "response": []
+        },
+        {
+          "name": "Students — تفاصيل",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admissions/students/{{sample_id}}/",
+            "description": "**GET** — **IsAuthenticated**\n\n**Admin فقط (is_staff + JWT).**"
+          },
+          "response": []
+        },
+        {
+          "name": "Students — إنشاء",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"اسم الطالب\",\n  \"email\": \"student@example.com\",\n  \"national_id\": \"00000000000\",\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/admissions/students/",
+            "description": "**POST** — حقول: `full_name`, `email` (فريد), `national_id` (فريد), `status`.\n\n**IsAuthenticated**\n\n**Admin فقط (is_staff + JWT).**"
+          },
+          "response": []
+        },
+        {
+          "name": "Students — PATCH",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/admissions/students/{{sample_id}}/",
+            "description": "**PATCH** — **IsAuthenticated**\n\n**Admin فقط (is_staff + JWT).**"
+          },
+          "response": []
+        },
+        {
+          "name": "Students — حذف",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/admissions/students/{{sample_id}}/",
+            "description": "**DELETE** — **IsAuthenticated**\n\n**Admin فقط (is_staff + JWT).**"
+          },
+          "response": []
+        },
+        {
+          "name": "Admission info — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admissions/info/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/admissions/info/` — معلومات القبول لكل برنامج (`requirements`, `procedure`, `tuition_fee`, …) + `program_details` للقراءة.\n\n**عام.**"
+          },
+          "response": []
+        },
+        {
+          "name": "Admission info — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admissions/info/{{sample_id}}/",
+            "description": "**GET** `/api/v1/admissions/info/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Applications — قائمة",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admissions/applications/",
+            "description": "**GET** — **JWT مطلوب**"
+          },
+          "response": []
+        },
+        {
+          "name": "Applications — إنشاء طلب (زائر أو مع توكن)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "full_name",
+                  "value": "أحمد محمد",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "ahmed@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "national_id",
+                  "value": "1234567890",
+                  "type": "text"
+                },
+                {
+                  "key": "program",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "form_file",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/admissions/applications/",
+            "description": "**POST** `/api/v1/admissions/applications/`\n\n**بدون توكن.** ينشئ الطالب تلقائياً.\n\nJSON:\n```json\n{ \"full_name\": \"أحمد\", \"email\": \"a@x.com\", \"national_id\": \"123\", \"program\": 1 }\n```\nأو multipart مع `form_file`."
+          },
+          "response": []
+        },
+        {
+          "name": "Applications — إنشاء (JSON فقط)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"أحمد محمد\",\n  \"email\": \"ahmed@example.com\",\n  \"national_id\": \"1234567890\",\n  \"program\": 1\n}"
+            },
+            "url": "{{base_url}}/api/v1/admissions/applications/",
+            "description": "**POST** `/api/v1/admissions/applications/`\n\n**بدون توكن.** ينشئ الطالب تلقائياً.\n\nJSON:\n```json\n{ \"full_name\": \"أحمد\", \"email\": \"a@x.com\", \"national_id\": \"123\", \"program\": 1 }\n```\nأو multipart مع `form_file`."
+          },
+          "response": []
+        },
+        {
+          "name": "Applications — تفاصيل",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admissions/applications/{{sample_id}}/",
+            "description": "**GET** — **JWT** — يتضمن `student_details`, `program_details` للقراءة."
+          },
+          "response": []
+        },
+        {
+          "name": "Applications — PATCH",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/admissions/applications/{{sample_id}}/",
+            "description": "**PATCH** — تحديث الحالة وغيرها — **JWT**"
+          },
+          "response": []
+        },
+        {
+          "name": "Applications — حذف",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/admissions/applications/{{sample_id}}/",
+            "description": "**DELETE** — **JWT**"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7 — Services (خدمات، مكتبة)",
+      "description": "قراءة فقط. المسار `list` هو اسم المورد وليس خطأ.",
+      "item": [
+        {
+          "name": "Services — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/services/list/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/services/list/` — قائمة الخدمات."
+          },
+          "response": []
+        },
+        {
+          "name": "Services — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/services/list/{{sample_id}}/",
+            "description": "**GET** `/api/v1/services/list/{id}/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Library — قائمة",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/services/library/?page=1&page_size=20&search=&ordering=",
+            "description": "**GET** `/api/v1/services/library/`"
+          },
+          "response": []
+        },
+        {
+          "name": "Library — تفاصيل",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/services/library/{{sample_id}}/",
+            "description": "**GET** `/api/v1/services/library/{id}/`"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8.0 — Dashboard Stats",
+      "item": [
+        {
+          "name": "stats — ملخص الأعداد",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/dashboard/stats/",
+            "description": "GET — عدد كل الموارد دفعة واحدة. JWT + is_staff."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8 — Dashboard (لوحة التحكم)",
+      "description": "كل الطلبات تتطلب **JWT** + مستخدم **is_staff**. القائمة تدعم عادة: page, page_size, search, ordering + فلاتر خاصة بكل مورد (انظر وصف كل طلب).",
+      "item": [
+        {
+          "name": "8.1 — Core",
+          "item": [
+            {
+              "name": "universities — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/universities/?search=&ordering=&page=1&page_size=20",
+                "description": "CRUD على /api/v1/dashboard/core/universities/. فلتر: id. بحث في الاسم والموقع والبريد."
+              },
+              "response": []
+            },
+            {
+              "name": "universities — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/universities/{{sample_id}}/",
+                "description": "GET/PUT/PATCH/DELETE على {id}/."
+              },
+              "response": []
+            },
+            {
+              "name": "languages — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/languages/?search=&ordering=&page=1",
+                "description": "فلتر: code."
+              },
+              "response": []
+            },
+            {
+              "name": "languages — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/languages/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "social-media — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/social-media/?university=&ordering=&page=1",
+                "description": "فلتر: university, platform."
+              },
+              "response": []
+            },
+            {
+              "name": "social-media — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/social-media/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "branches — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/branches/?university=&search=&page=1",
+                "description": "فلتر: university."
+              },
+              "response": []
+            },
+            {
+              "name": "branches — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/branches/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "pages — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/pages/?page_type=&slug=&search=&ordering=&page=1",
+                "description": "فلتر: page_type, slug."
+              },
+              "response": []
+            },
+            {
+              "name": "pages — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/pages/{{sample_id}}/",
+                "description": "ملاحظة: الواجهة العامة تستخدم lookup بالـ slug؛ الداشبورد يستخدم {id}/."
+              },
+              "response": []
+            },
+            {
+              "name": "contact-messages — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/contact-messages/?status=&sent_at_from=&sent_at_to=&search=&ordering=&page=1",
+                "description": "فلتر: status, sent_at_from, sent_at_to."
+              },
+              "response": []
+            },
+            {
+              "name": "contact-messages — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/core/contact-messages/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8.2 — Academics",
+          "item": [
+            {
+              "name": "colleges — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/colleges/?university=&search=&ordering=&page=1",
+                "description": "فلتر: university."
+              },
+              "response": []
+            },
+            {
+              "name": "colleges — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/colleges/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "departments — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/departments/?college=&search=&page=1",
+                "description": "فلتر: college."
+              },
+              "response": []
+            },
+            {
+              "name": "departments — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/departments/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "programs — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/programs/?department=&level=&search=&page=1",
+                "description": "فلتر: department, level."
+              },
+              "response": []
+            },
+            {
+              "name": "programs — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/programs/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "staff — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/staff/?department=&staff_type=&search=&page=1",
+                "description": "فلتر: department, staff_type."
+              },
+              "response": []
+            },
+            {
+              "name": "staff — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/staff/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "research — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/research/?staff=&published_from=&published_to=&search=&page=1",
+                "description": "فلتر: staff, published_from, published_to."
+              },
+              "response": []
+            },
+            {
+              "name": "research — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/academics/research/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8.3 — News (قوائم داشبورد: بحث وفلترة)",
+          "description": "لطلبات **POST/PATCH/DELETE** الكاملة راجع **«9.3 News — CRUD»**. هنا فقط **قوائم وتفاصيل** مع باراميترات ظاهرة في **Params**.",
+          "item": [
+            {
+              "name": "articles — قائمة (بحث · فلترة · ترقيم)",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/dashboard/news/articles/?search=&university=&publish_date_from=&publish_date_to=&ordering=-publish_date&page=1&page_size=20",
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "title_ar, title_en, content"
+                    },
+                    {
+                      "key": "university",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "publish_date_from",
+                      "value": "",
+                      "description": "YYYY-MM-DD"
+                    },
+                    {
+                      "key": "publish_date_to",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "ordering",
+                      "value": "-publish_date",
+                      "description": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "page_size",
+                      "value": "20",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "**GET** — كل الأخبار تحتوي `image` في الرد."
+              },
+              "response": []
+            },
+            {
+              "name": "articles — تفاصيل",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/articles/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "events — قائمة (بحث · فلترة مكان · ترقيم)",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/dashboard/news/events/?search=&university=&location=&event_date_from=&event_date_to=&ordering=event_date&page=1",
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "university",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "location",
+                      "value": "",
+                      "description": "بحث جزئي في حقل المكان"
+                    },
+                    {
+                      "key": "event_date_from",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "event_date_to",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "ordering",
+                      "value": "event_date",
+                      "description": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "**GET** — الفعاليات تتضمن **`image`**."
+              },
+              "response": []
+            },
+            {
+              "name": "events — تفاصيل",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/events/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "announcements — قائمة",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/dashboard/news/announcements/?search=&university=&date_from=&date_to=&ordering=-date&page=1",
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "university",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "date_from",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "ordering",
+                      "value": "-date",
+                      "description": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "announcements — تفاصيل",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/announcements/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8.4 — Careers",
+          "item": [
+            {
+              "name": "postings — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/careers/postings/?university=&status=&job_type=&deadline_from=&deadline_to=&search=&page=1",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "postings — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/careers/postings/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "applications — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/careers/applications/?job=&status=&apply_date_from=&apply_date_to=&search=&page=1",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "applications — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/careers/applications/{{sample_id}}/",
+                "description": "تحديث الحالة: PATCH body JSON."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8.5 — Admissions",
+          "item": [
+            {
+              "name": "students — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/admissions/students/?status=&search=&ordering=&page=1",
+                "description": "فلتر: status.\n\n**Admin فقط (is_staff + JWT).**"
+              },
+              "response": []
+            },
+            {
+              "name": "students — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/admissions/students/{{sample_id}}/",
+                "description": "\n\n**Admin فقط (is_staff + JWT).**"
+              },
+              "response": []
+            },
+            {
+              "name": "admission info — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/admissions/info/?program=&search=&page=1",
+                "description": "فلتر: program (معرف البرنامج)."
+              },
+              "response": []
+            },
+            {
+              "name": "admission info — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/admissions/info/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "applications — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/admissions/applications/?student=&program=&status=&apply_date_from=&apply_date_to=&search=&page=1",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "applications — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/admissions/applications/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8.6 — Services",
+          "item": [
+            {
+              "name": "services — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/services/list/?service_type=&search=&ordering=&page=1",
+                "description": "فلتر: service_type."
+              },
+              "response": []
+            },
+            {
+              "name": "services — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/services/list/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            },
+            {
+              "name": "library — قائمة",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/services/library/?university=&search=&page=1",
+                "description": "فلتر: university."
+              },
+              "response": []
+            },
+            {
+              "name": "library — تفاصيل",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": "{{base_url}}/api/v1/dashboard/services/library/{{sample_id}}/",
+                "description": ""
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9 — Dashboard CRUD كامل (إضافة · تعديل · حذف)",
+      "description": "كل الطلبات تحتاج **JWT** + **`is_staff`**. لكل مورد في الداشبورد: **POST** على مسار القائمة لإنشاء، **PATCH** و **DELETE** على `{id}/`. الـ ViewSets كلها `ModelViewSet` في الكود — هذا المجلد يغطي **كل** الموارد.",
+      "item": [
+        {
+          "name": "9.1 Core — CRUD",
+          "description": "مسار الأساس: `/api/v1/dashboard/core/`",
+          "item": [
+            {
+              "name": "Core — universities — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name_ar\": \"جامعة\",\n  \"name_en\": \"University\",\n  \"location\": \"المدينة\",\n  \"email\": \"info@uni.edu\",\n  \"phone\": \"+963...\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/universities/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — universities — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"location\": \"موقع محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/universities/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — universities — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/universities/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — languages — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"ar\",\n  \"label\": \"العربية\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/languages/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — languages — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"اللغة العربية\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/languages/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — languages — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/languages/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — social-media — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university\": 1,\n  \"platform\": \"facebook\",\n  \"url\": \"https://facebook.com/...\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/social-media/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — social-media — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"https://facebook.com/page\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/social-media/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — social-media — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/social-media/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — branches — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university\": 1,\n  \"name\": \"فرع\",\n  \"address\": \"العنوان\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/branches/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — branches — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"اسم فرع محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/branches/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — branches — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/branches/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — pages — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slug\": \"about-us\",\n  \"title_ar\": \"من نحن\",\n  \"title_en\": \"About\",\n  \"content_ar\": \"...\",\n  \"content_en\": \"...\",\n  \"page_type\": \"about\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/pages/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — pages — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title_ar\": \"عنوان محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/pages/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — pages — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/pages/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — contact-messages — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sender_name\": \"اسم\",\n  \"sender_email\": \"a@b.com\",\n  \"subject\": \"موضوع\",\n  \"message\": \"نص\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/contact-messages/",
+                "description": "يمكن للموظف أيضًا إنشاء رسالة من الداشبورد (نفس الحقول)."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — contact-messages — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"read\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/contact-messages/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Core — contact-messages — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/core/contact-messages/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9.2 Academics — CRUD",
+          "description": "`/api/v1/dashboard/academics/`",
+          "item": [
+            {
+              "name": "Academics — colleges — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university\": 1,\n  \"name_ar\": \"كلية\",\n  \"name_en\": \"College\",\n  \"description\": \"\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/colleges/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — colleges — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"وصف محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/colleges/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — colleges — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/colleges/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — departments — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"college\": 1,\n  \"name_ar\": \"قسم\",\n  \"name_en\": \"Department\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/departments/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — departments — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name_ar\": \"قسم محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/departments/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — departments — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/departments/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — programs — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"department\": 1,\n  \"name_ar\": \"برنامج\",\n  \"name_en\": \"Program\",\n  \"level\": \"bachelor\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/programs/",
+                "description": "لرفع `study_plan` استخدم multipart على نفس المسار."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — programs — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name_ar\": \"اسم برنامج محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/programs/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — programs — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/programs/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — staff — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"department\": 1,\n  \"full_name\": \"د. اسم\",\n  \"title\": \"أستاذ\",\n  \"bio\": \"...\",\n  \"email\": \"p@uni.edu\",\n  \"staff_type\": \"Academic\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/staff/",
+                "description": "للصورة `photo` استخدم multipart."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — staff — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"أستاذ محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/staff/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — staff — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/staff/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — research — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"staff\": 1,\n  \"title\": \"عنوان بحث\",\n  \"abstract\": \"ملخص\",\n  \"published_date\": \"2026-01-15\",\n  \"url\": \"https://...\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/research/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — research — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"abstract\": \"ملخص محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/research/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Academics — research — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/academics/research/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9.3 News — CRUD",
+          "description": "`/api/v1/dashboard/news/` — **الأخبار والفعاليات:** الإنشاء عبر **multipart** لأن **الصورة إلزامية**.",
+          "item": [
+            {
+              "name": "News — articles — POST (multipart · صورة إلزامية)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "university",
+                      "value": "1",
+                      "type": "text"
+                    },
+                    {
+                      "key": "title_ar",
+                      "value": "خبر",
+                      "type": "text"
+                    },
+                    {
+                      "key": "title_en",
+                      "value": "News",
+                      "type": "text"
+                    },
+                    {
+                      "key": "content",
+                      "value": "نص الخبر",
+                      "type": "text"
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": [],
+                      "description": "إلزامي"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/articles/",
+                "description": "**إنشاء خبر:** استخدم `multipart/form-data` مع حقل **`image`** (إلزامي). طلب JSON بدون صورة يُرفض."
+              },
+              "response": []
+            },
+            {
+              "name": "News — articles — PATCH (تعديل نص دون تغيير الصورة)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title_ar\": \"عنوان محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/articles/{{sample_id}}/",
+                "description": "**PATCH** جزئي — لتحديث الصورة أرسل multipart مع حقل `image`."
+              },
+              "response": []
+            },
+            {
+              "name": "News — articles — DELETE",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/articles/{{sample_id}}/",
+                "description": "**DELETE**"
+              },
+              "response": []
+            },
+            {
+              "name": "News — events — POST (multipart · صورة إلزامية)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "university",
+                      "value": "1",
+                      "type": "text"
+                    },
+                    {
+                      "key": "title_ar",
+                      "value": "فعالية",
+                      "type": "text"
+                    },
+                    {
+                      "key": "title_en",
+                      "value": "Event",
+                      "type": "text"
+                    },
+                    {
+                      "key": "event_date",
+                      "value": "2026-06-01T10:00:00Z",
+                      "type": "text"
+                    },
+                    {
+                      "key": "location",
+                      "value": "قاعة المحاضرات",
+                      "type": "text"
+                    },
+                    {
+                      "key": "description",
+                      "value": "تفاصيل الفعالية",
+                      "type": "text"
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": [],
+                      "description": "إلزامي"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/events/",
+                "description": "**إنشاء فعالية:** `multipart` مع **`image`** إلزامي (أضف ملفًا في Postman)."
+              },
+              "response": []
+            },
+            {
+              "name": "News — events — PATCH",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"location\": \"قاعة محدثة\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/events/{{sample_id}}/",
+                "description": "**PATCH** — تحديث موقع أو نص؛ لصورة جديدة استخدم multipart."
+              },
+              "response": []
+            },
+            {
+              "name": "News — events — DELETE",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/events/{{sample_id}}/",
+                "description": "**DELETE**"
+              },
+              "response": []
+            },
+            {
+              "name": "News — announcements — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university\": 1,\n  \"title\": \"إعلان\",\n  \"body\": \"نص الإعلان\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/announcements/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "News — announcements — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"عنوان إعلان محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/announcements/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "News — announcements — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/news/announcements/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9.4 Careers — CRUD",
+          "description": "`/api/v1/dashboard/careers/`",
+          "item": [
+            {
+              "name": "Careers — postings — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university\": 1,\n  \"title\": \"وظيفة\",\n  \"job_type\": \"Full-time\",\n  \"description\": \"...\",\n  \"requirements\": \"...\",\n  \"deadline\": \"2026-12-31\",\n  \"status\": \"open\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/careers/postings/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Careers — postings — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"closed\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/careers/postings/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Careers — postings — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/careers/postings/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Careers — applications — POST (إضافة + ملف CV)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "job",
+                      "value": "1",
+                      "type": "text"
+                    },
+                    {
+                      "key": "applicant_name",
+                      "value": "اسم",
+                      "type": "text"
+                    },
+                    {
+                      "key": "applicant_email",
+                      "value": "e@mail.com",
+                      "type": "text"
+                    },
+                    {
+                      "key": "cv",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/careers/applications/",
+                "description": "**POST** multipart — الحقل `cv` ملف إلزامي في النموذج."
+              },
+              "response": []
+            },
+            {
+              "name": "Careers — applications — PATCH",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"reviewed\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/careers/applications/{{sample_id}}/",
+                "description": "**PATCH** حالة الطلب."
+              },
+              "response": []
+            },
+            {
+              "name": "Careers — applications — DELETE",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/careers/applications/{{sample_id}}/",
+                "description": "**DELETE**"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9.5 Admissions — CRUD",
+          "description": "`/api/v1/dashboard/admissions/`",
+          "item": [
+            {
+              "name": "Admissions — students — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"طالب\",\n  \"email\": \"unique@mail.com\",\n  \"national_id\": \"00000000000\",\n  \"status\": \"active\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/students/",
+                "description": "البريد والرقم الوطني يجب أن يكونا فريدين.\n\n**Admin فقط (is_staff + JWT).**"
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — students — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"inactive\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/students/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود.\n\n**Admin فقط (is_staff + JWT).**"
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — students — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/students/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل.\n\n**Admin فقط (is_staff + JWT).**"
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — info (قبول/برنامج) — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"program\": 1,\n  \"requirements\": \"...\",\n  \"procedure\": \"...\",\n  \"tuition_fee\": \"5000.00\",\n  \"academic_calendar\": \"...\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/info/",
+                "description": "برنامج واحد = سجل قبول واحد (OneToOne)."
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — info (قبول/برنامج) — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tuition_fee\": \"5500.00\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/info/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — info (قبول/برنامج) — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/info/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — applications — POST (JSON أو ملف)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"أحمد محمد\",\n  \"email\": \"ahmed@example.com\",\n  \"national_id\": \"1234567890\",\n  \"program\": 1\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/applications/",
+                "description": "**POST** `/api/v1/admissions/applications/`\n\n**بدون توكن.** ينشئ الطالب تلقائياً.\n\nJSON:\n```json\n{ \"full_name\": \"أحمد\", \"email\": \"a@x.com\", \"national_id\": \"123\", \"program\": 1 }\n```\nأو multipart مع `form_file`."
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — applications — PATCH",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"accepted\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/applications/{{sample_id}}/",
+                "description": "**PATCH**"
+              },
+              "response": []
+            },
+            {
+              "name": "Admissions — applications — DELETE",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/admissions/applications/{{sample_id}}/",
+                "description": "**DELETE**"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9.6 Services — CRUD",
+          "description": "`/api/v1/dashboard/services/` — المسار `list` = الخدمات.",
+          "item": [
+            {
+              "name": "Services — list (خدمات) — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name_ar\": \"خدمة\",\n  \"name_en\": \"Service\",\n  \"service_type\": \"general\",\n  \"url\": \"https://...\",\n  \"description\": \"...\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/services/list/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Services — list (خدمات) — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"وصف محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/services/list/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Services — list (خدمات) — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/services/list/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            },
+            {
+              "name": "Services — library — POST (إضافة)",
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university\": 1,\n  \"name\": \"المكتبة المركزية\",\n  \"location\": \"المبنى أ\",\n  \"access_url\": \"https://...\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/services/library/",
+                "description": "**POST** على قائمة المورد لإنشاء سجل جديد."
+              },
+              "response": []
+            },
+            {
+              "name": "Services — library — PATCH (تعديل جزئي)",
+              "request": {
+                "method": "PATCH",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"location\": \"مبنى محدث\"\n}"
+                },
+                "url": "{{base_url}}/api/v1/dashboard/services/library/{{sample_id}}/",
+                "description": "**PATCH** `{id}/` — مثال حقول صالحة؛ عيّن `sample_id` لمعرّف موجود."
+              },
+              "response": []
+            },
+            {
+              "name": "Services — library — DELETE (حذف)",
+              "request": {
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/api/v1/dashboard/services/library/{{sample_id}}/",
+                "description": "**DELETE** `{id}/` — حذف السجل."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
