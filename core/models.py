@@ -61,15 +61,10 @@ class Page(models.Model):
 class ContactMessage(models.Model):
     sender_name = models.CharField(max_length=255)
     sender_email = models.EmailField()
-
-    subject_ar = models.CharField(max_length=255, verbose_name="الموضوع بالعربية", default='')
-    subject_en = models.CharField(max_length=255, verbose_name="الموضوع بالإنجليزية", default='')
-
-    message_ar = models.TextField(verbose_name="الرسالة بالعربية", default='')
-    message_en = models.TextField(verbose_name="الرسالة بالإنجليزية", default='')
-
+    subject = models.CharField(max_length=255, verbose_name="الموضوع", null=True, blank=True)
+    message = models.TextField(verbose_name="الرسالة", null=True, blank=True) # أضفنا null و blank
     sent_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default='new')
 
     def __str__(self):
-        return f"{self.subject_ar} from {self.sender_name}"
+        return f"{self.subject} from {self.sender_name}"

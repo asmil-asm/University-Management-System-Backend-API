@@ -75,10 +75,8 @@ class ContactMessageSerializer(serializers.ModelSerializer):
             'id',
             'sender_name',
             'sender_email',
-            'subject_ar',
-            'subject_en',
-            'message_ar',
-            'message_en',
+            'subject',
+            'message',
             'sent_at',
             'status',
         ]

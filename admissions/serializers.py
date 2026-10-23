@@ -38,42 +38,38 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """
-        المنطق المطلوب:
-        - عند اختيار accepted: يحول الطالب لـ accepted ويحذف الطلب نهائياً.
-        - عند اختيار rejected: يحذف الطلب مباشرة ولا يضيف أي طالب.
-        - عند بقائه pending: يجرى التعديل العادي للبيانات.
+        المنطق الاحترافي في سوق العمل:
+        - لا يتم حذف الطلب أبداً (لأنه سجل أرشيفي وقانوني).
+        - يتم تحديث حالة الطلب (pending, accepted, rejected).
+        - يتم مزامنة حالة الطالب المرتبط تلقائياً بناءً على حالة الطلب.
         """
         status_choice = validated_data.get('status', instance.status)
         student = instance.student
 
-        # 1. إذا تم اختيار مقبول (accepted)
-        if status_choice == 'accepted':
-            if student:
-                student.status = 'accepted'
-                student.save(update_fields=['status'])
-            
-            # حذف طلب الالتحاق نهائياً من الجدول
-            instance.delete()
-            return instance
-
-        # 2. إذا تم اختيار مرفوض (rejected)
-        elif status_choice == 'rejected':
-            # حذف الطالب المؤقت المعلق لكي لا يمتلئ النظام بحسابات مرفوضة
-            if student and student.status == 'pending':
-                student.delete()
-                
-            # حذف طلب الالتحاق نهائياً من الجدول
-            instance.delete()
-            return instance
-
-        # 3. إذا ظل معلقاً (pending)
+        # 1. تحديث حالة الطلب
         instance.status = status_choice
+        instance.save()
+
+        # 2. تحديث حالة الطالب المرتبط بناءً على قرار القبول/الرفض
+        if student:
+            if status_choice == 'accepted':
+                student.status = 'accepted'
+                if instance.form_file and not student.student_file:
+                    student.student_file = instance.form_file
+                student.save()
+            elif status_choice == 'rejected':
+                student.status = 'rejected'
+                student.save(update_fields=['status'])
+            elif status_choice == 'pending':
+                student.status = 'pending'
+                student.save(update_fields=['status'])
+
+        # 3. تحديث اسم الطالب إن وجد في الطلب
         student_name = validated_data.get('student_name')
         if student_name and student:
             student.full_name = student_name
             student.save(update_fields=['full_name'])
-            
-        instance.save()
+
         return instance
 
 
@@ -93,12 +89,16 @@ class ApplicationCreateSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
+        form_file = validated_data.get('form_file')
+        
+        # إنشاء أو تحديث الطالب مع ربط الملف مباشرة بحسابه أيضاً
         student, created = Student.objects.get_or_create(
             email=validated_data['email'],
             defaults={
                 'full_name': validated_data['full_name'],
                 'national_id': validated_data['national_id'],
                 'status': 'pending',
+                'student_file': form_file,
             },
         )
         
@@ -106,12 +106,14 @@ class ApplicationCreateSerializer(serializers.Serializer):
             student.full_name = validated_data['full_name']
             if not Student.objects.filter(national_id=validated_data['national_id']).exclude(pk=student.pk).exists():
                 student.national_id = validated_data['national_id']
-            student.save(update_fields=['full_name', 'national_id'])
+            if form_file:
+                student.student_file = form_file
+            student.save()
 
         return Application.objects.create(
             student=student,
             program=validated_data['program'],
-            form_file=validated_data.get('form_file'),
+            form_file=form_file,
             status='pending'
         )
 

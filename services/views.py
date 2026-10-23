@@ -7,5 +7,5 @@ class ServiceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ServiceSerializer
 
 class LibraryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Library.objects.all()
+    queryset = Library.objects.select_related('university').all()
     serializer_class = LibrarySerializer

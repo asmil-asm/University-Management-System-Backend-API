@@ -1,6 +1,7 @@
 from core.dashboard_base import StaffModelViewSet
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.parsers import FormParser, MultiPartParser
 
 from .filters import AdmissionFilter, ApplicationFilter, StudentFilter
 from .models import Admission, Application, Student
@@ -15,12 +16,13 @@ from .serializers import (
 class DashboardStudentViewSet(StaffModelViewSet):
     serializer_class = StudentSerializer
     filterset_class = StudentFilter
+    parser_classes = [MultiPartParser, FormParser]
     search_fields = ['full_name', 'email', 'national_id']
     ordering_fields = ['id', 'full_name', 'email', 'status']
-    ordering = ['full_name']
+    ordering = ['-id']
 
     def get_queryset(self):
-        return Student.objects.prefetch_related('applications').filter(status='accepted')
+        return Student.objects.prefetch_related('applications').all()
 
 
 class DashboardAdmissionViewSet(StaffModelViewSet):
@@ -41,6 +43,7 @@ class DashboardAdmissionViewSet(StaffModelViewSet):
 class DashboardApplicationViewSet(StaffModelViewSet):
     serializer_class = ApplicationSerializer
     filterset_class = ApplicationFilter
+    parser_classes = [MultiPartParser, FormParser]
     search_fields = ['status', 'student__full_name', 'student__email', 'program__name_ar']
     ordering_fields = ['apply_date', 'id', 'status']
     ordering = ['-apply_date']

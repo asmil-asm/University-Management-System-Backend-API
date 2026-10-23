@@ -79,10 +79,8 @@ class DashboardContactMessageViewSet(StaffModelViewSet):
     search_fields = [
         'sender_name',
         'sender_email',
-        'subject_ar',
-        'subject_en',
-        'message_ar',
-        'message_en',
+        'subject',
+        'message',
     ]
     ordering_fields = ['sent_at', 'status', 'id']
     ordering = ['-sent_at']

@@ -16,12 +16,13 @@ class DashboardServiceViewSet(StaffModelViewSet):
         return Service.objects.all()
 
 
+
 class DashboardLibraryViewSet(StaffModelViewSet):
     serializer_class = LibrarySerializer
     filterset_class = LibraryFilter
-    search_fields = ['name', 'location']
-    ordering_fields = ['id', 'name']
-    ordering = ['name']
+    search_fields = ['name_ar', 'name_en', 'location_ar', 'location_en']
+    ordering_fields = ['id', 'name_ar', 'name_en']
+    ordering = ['name_ar']
 
     def get_queryset(self):
         return Library.objects.select_related('university').all()
