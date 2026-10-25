@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url # تمت الإضافة
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,11 +23,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r@%-woi1zq(%x28k-lv+a$!95r%()6vp_p$ul_yq31(=j7)d_f'
+# تم التعديل: قراءة المفتاح من متغيرات البيئة، مع استخدام المفتاح القديم كاحتياطي للتطوير المحلي
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-r@%-woi1zq(%x28k-lv+a$!95r%()6vp_p$ul_yq31(=j7)d_f')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# تم التعديل: قراءة DEBUG من متغيرات البيئة (سيكون False على Render)
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+# يفضل تغييرها لاحقاً إلى رابط Render الخاص بك بدلاً من النجمة
 ALLOWED_HOSTS = ['*']
 
 
@@ -58,6 +62,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # تمت الإضافة: لإدارة الملفات الثابتة على Render
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -89,15 +94,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# تم التعديل: استخدام dj_database_url لقراءة رابط Neon من Render
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'jdu_db',
-        'USER': 'postgres',
-        'PASSWORD': '12345',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default='postgres://postgres:12345@localhost:5432/jdu_db',
+        conn_max_age=0 # هام جداً لـ Neon (يغلق الاتصال بعد كل طلب لتجنب انقطاعه)
+    )
 }
 
 
@@ -138,6 +140,20 @@ USE_TZ = True
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# تمت الإضافة: إعدادات الملفات الثابتة الخاصة بـ Render و WhiteNoise
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# إعداد Django 6.0 الجديد لـ WhiteNoise (بديل STATICFILES_STORAGE)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
