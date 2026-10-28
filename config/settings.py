@@ -94,11 +94,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# تم التعديل: استخدام dj_database_url لقراءة رابط Neon من Render
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://postgres:12345@localhost:5432/jdu_db',
-        conn_max_age=0 # هام جداً لـ Neon (يغلق الاتصال بعد كل طلب لتجنب انقطاعه)
+        default=os.environ.get('postgresql://neondb_owner:npg_53YarqUgVGSJ@ep-misty-mud-b43q97o6-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
+        conn_max_age=600,
+        ssl_require=True,
     )
 }
 
