@@ -13,28 +13,51 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-import dj_database_url # تمت الإضافة
+
+import dj_database_url
+from dotenv import load_dotenv
+
+# تحميل متغيرات البيئة من ملف .env (للتطوير المحلي فقط)
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# ============================================================
+# الأمان الأساسي
+# ============================================================
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# تم التعديل: قراءة المفتاح من متغيرات البيئة، مع استخدام المفتاح القديم كاحتياطي للتطوير المحلي
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-r@%-woi1zq(%x28k-lv+a$!95r%()6vp_p$ul_yq31(=j7)d_f')
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-r@%-woi1zq(%x28k-lv+a$!95r%()6vp_p$ul_yq31(=j7)d_f'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# تم التعديل: قراءة DEBUG من متغيرات البيئة (سيكون False على Render)
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-
-# يفضل تغييرها لاحقاً إلى رابط Render الخاص بك بدلاً من النجمة
-ALLOWED_HOSTS = ['*']
+# الافتراضي False (آمن للإنتاج). محلياً اضبط DEBUG=True في ملف .env
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 
-# Application definition
+# ============================================================
+# المضيفون المسموح لهم
+# ============================================================
+
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+]
+
+# Render يضيف هذا المتغير تلقائياً عند النشر
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+
+# ============================================================
+# التطبيقات
+# ============================================================
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -43,13 +66,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
-    
+
     # Local apps
     'core',
     'academics',
@@ -62,7 +85,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # تمت الإضافة: لإدارة الملفات الثابتة على Render
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -91,19 +114,34 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# ============================================================
+# قاعدة البيانات
+# ============================================================
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # بيئة الإنتاج على Render (PostgreSQL)
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
-}
+else:
+    # التطوير المحلي (SQLite)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+# ============================================================
+# كلمات المرور
+# ============================================================
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -121,29 +159,26 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+# ============================================================
+# التدويل
+# ============================================================
 
 LANGUAGE_CODE = 'ar-sa'
-
 TIME_ZONE = 'Asia/Damascus'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
+# ============================================================
+# الملفات الثابتة والوسائط
+# ============================================================
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# تمت الإضافة: إعدادات الملفات الثابتة الخاصة بـ Render و WhiteNoise
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# إعداد Django 6.0 الجديد لـ WhiteNoise (بديل STATICFILES_STORAGE)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -154,12 +189,17 @@ STORAGES = {
 }
 
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+# ============================================================
+# النوع الافتراضي للمفتاح الأساسي
+# ============================================================
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# DRF Settings
+
+# ============================================================
+# إعدادات Django REST Framework
+# ============================================================
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -169,7 +209,11 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Simple JWT Settings
+
+# ============================================================
+# إعدادات Simple JWT
+# ============================================================
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -180,5 +224,60 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True # Change to specific origins in production
+
+# ============================================================
+# CORS — دعم localhost:8001 محلياً + نطاق الواجهة على Render
+# ============================================================
+
+if DEBUG:
+    # في التطوير المحلي: سماح كامل لتسهيل العمل على منافذ مختلفة
+    # (8000, 8001, 3000, 5173, ...)
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    # في الإنتاج: تقييد صارم بنطاق الواجهة الأمامية فقط
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        origin for origin in [
+            os.environ.get('FRONTEND_URL'),
+        ] if origin
+    ]
+
+
+# ============================================================
+# CSRF Trusted Origins — دعم localhost:8001 و Render
+# ============================================================
+
+CSRF_TRUSTED_ORIGINS = [
+    # بيئة التطوير المحلي (كل المنافذ المحتملة)
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost:8001',
+    'http://127.0.0.1:8001',
+    'http://localhost:3000',
+    'http://localhost:5173',
+]
+
+# في الإنتاج: إضافة نطاق Render والواجهة الأمامية تلقائياً
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL')
+if FRONTEND_URL:
+    CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
+
+
+# ============================================================
+# إعدادات أمان إضافية (تعمل فقط في الإنتاج)
+# ============================================================
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # سنة واحدة
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
