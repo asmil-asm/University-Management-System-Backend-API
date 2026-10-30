@@ -127,7 +127,10 @@ if DATABASE_URL:
             DATABASE_URL,
             conn_max_age=600,
             ssl_require=True,
+
         )
+                    'DISABLE_SERVER_SIDE_CURSORS': True,
+
     }
 else:
     # التطوير المحلي (SQLite)
