@@ -67,7 +67,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third party apps
+    # Third party apps (Cloudinary)
+    'cloudinary_storage',
+    'cloudinary',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -140,13 +142,6 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-    # التطوير المحلي (SQLite)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
 
 
 # ============================================================
@@ -180,7 +175,7 @@ USE_TZ = True
 
 
 # ============================================================
-# الملفات الثابتة والوسائط
+# الملفات الثابتة والوسائط (التخزين المدمج لـ Cloudinary محلياً وإنتاجياً)
 # ============================================================
 
 STATIC_URL = '/static/'
@@ -189,14 +184,32 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# إعدادات التخزين السحابي (Cloudinary للإنتاج / محلي للتطوير)
+if not DEBUG and os.environ.get('CLOUDINARY_CLOUD_NAME'):
+    # إعدادات Cloudinary في الإنتاج على Render
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    }
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    # التخزين المحلي أثناء التطوير (Localhost)
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 
 # ============================================================
@@ -240,11 +253,8 @@ SIMPLE_JWT = {
 # ============================================================
 
 if DEBUG:
-    # في التطوير المحلي: سماح كامل لتسهيل العمل على منافذ مختلفة
-    # (8000, 8001, 3000, 5173, ...)
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    # في الإنتاج: تقييد صارم بنطاق الواجهة الأمامية فقط
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = [
         origin for origin in [
@@ -258,7 +268,6 @@ else:
 # ============================================================
 
 CSRF_TRUSTED_ORIGINS = [
-    # بيئة التطوير المحلي (كل المنافذ المحتملة)
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://localhost:8001',
@@ -267,7 +276,6 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
 ]
 
-# في الإنتاج: إضافة نطاق Render والواجهة الأمامية تلقائياً
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
