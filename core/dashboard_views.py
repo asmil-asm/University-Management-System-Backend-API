@@ -70,7 +70,7 @@ class DashboardPageViewSet(StaffModelViewSet):
     ordering = ['slug']
 
     def get_queryset(self):
-        return Page.objects.all()
+        return Page.objects.select_related('university').all()
 
 
 class DashboardContactMessageViewSet(StaffModelViewSet):

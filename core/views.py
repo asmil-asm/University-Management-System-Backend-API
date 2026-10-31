@@ -19,7 +19,7 @@ class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class PageViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Page.objects.all()
+    queryset = Page.objects.select_related('university').all()
     serializer_class = PageSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'slug'
