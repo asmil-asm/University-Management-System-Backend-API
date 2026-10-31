@@ -62,7 +62,8 @@ class LanguageSerializer(serializers.ModelSerializer):
 
 
 class PageSerializer(serializers.ModelSerializer):
-    # لا يوجد حقل university في موديل Page
+    university = UniversityLookupField(required=False, allow_null=True)
+
     class Meta:
         model = Page
         fields = '__all__'
