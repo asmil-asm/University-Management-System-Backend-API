@@ -42,7 +42,7 @@ class Branch(models.Model):
 
 
 class Page(models.Model):
-    university = models.ForeignKey(University, on_delete=models.CASCADE, related_name='pages', null=True, blank=True, verbose_name="الجامعة")
+    university = models.ForeignKey(University, on_delete=models.CASCADE, related_name='pages')
     PAGE_TYPES = (
         ('about', 'عن الجامعة'),
         ('vision', 'الرؤية والرسالة'),

@@ -62,15 +62,7 @@ class LanguageSerializer(serializers.ModelSerializer):
 
 
 class PageSerializer(serializers.ModelSerializer):
-    university = UniversityLookupField(required=False, allow_null=True)
-    university_name = serializers.SerializerMethodField(read_only=True)
-
-    def get_university_name(self, obj):
-        if obj.university_id is None:
-            return None
-        u = obj.university
-        return u.name_ar or u.name_en
-
+    university = UniversityLookupField()
     class Meta:
         model = Page
         fields = '__all__'

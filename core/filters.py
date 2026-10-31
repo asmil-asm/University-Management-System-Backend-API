@@ -31,7 +31,7 @@ class BranchFilter(filters.FilterSet):
 class PageFilter(filters.FilterSet):
     class Meta:
         model = Page
-        fields = ['page_type', 'slug']
+        fields = ['university','page_type', 'slug']
 
 
 class ContactMessageFilter(filters.FilterSet):
