@@ -42,6 +42,7 @@ class Branch(models.Model):
 
 
 class Page(models.Model):
+    university = models.ForeignKey(University, on_delete=models.CASCADE, related_name='pages', null=True, blank=True, verbose_name="الجامعة")
     PAGE_TYPES = (
         ('about', 'عن الجامعة'),
         ('vision', 'الرؤية والرسالة'),
@@ -58,11 +59,12 @@ class Page(models.Model):
     def __str__(self):
         return self.title_ar
 
+
 class ContactMessage(models.Model):
     sender_name = models.CharField(max_length=255)
     sender_email = models.EmailField()
     subject = models.CharField(max_length=255, verbose_name="الموضوع", null=True, blank=True)
-    message = models.TextField(verbose_name="الرسالة", null=True, blank=True) # أضفنا null و blank
+    message = models.TextField(verbose_name="الرسالة", null=True, blank=True)
     sent_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default='new')
 
