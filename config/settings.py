@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
+import cloudinary                     
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -52,6 +53,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',   
+    'cloudinary',
 
     # Third party apps
     'rest_framework',
@@ -156,11 +159,31 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')   # يبقى للتطوير المحلي فقط
+
+# ✅ NEW — بيانات اعتماد Cloudinary (تُقرأ من متغيرات البيئة)
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY':    os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+}
+
+# ✅ NEW — ربط مكتبة Cloudinary الأساسية
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+)
+
+# ✅ CHANGED — استخدام Cloudinary للوسائط في الإنتاج، والقرص المحلي في التطوير
+if DEBUG:
+    _media_backend = "django.core.files.storage.FileSystemStorage"
+else:
+    _media_backend = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": _media_backend,
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -202,20 +225,12 @@ SIMPLE_JWT = {
 # ============================================================
 # CORS — دعم عدة نطاقات (الموقع العام + لوحة التحكم + غيرها)
 # ============================================================
-#
-# على Render أضف متغير البيئة التالي:
-# FRONTEND_URLS = https://future-private-university.onrender.com,https://your-dashboard.onrender.com
-#
-# يمكنك أيضًا استخدام FRONTEND_URL القديم (نطاق واحد) — سيُدمج تلقائيًا.
-# ============================================================
 
-# النطاقات الاحتياطية المضمونة (حتى لو لم تُضبط متغيرات البيئة)
 _FALLBACK_ORIGINS = [
     'https://future-private-university.onrender.com',
 ]
 
 def _parse_origins(raw: str) -> list[str]:
-    """يفصل النطاقات بفواصل ويُنظّفها (بدون / في النهاية وبدون مسافات)."""
     return [o.strip().rstrip('/') for o in raw.split(',') if o.strip()]
 
 
@@ -228,7 +243,7 @@ else:
     _env_urls = _parse_origins(os.environ.get('FRONTEND_URLS', ''))
     _legacy_url = os.environ.get('FRONTEND_URL', '').strip().rstrip('/')
 
-    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(  # إزالة التكرار مع الحفاظ على الترتيب
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(
         _env_urls
         + ([_legacy_url] if _legacy_url else [])
         + _FALLBACK_ORIGINS
@@ -240,7 +255,6 @@ else:
 # ============================================================
 
 CSRF_TRUSTED_ORIGINS = [
-    # بيئة التطوير المحلي
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://localhost:8001',
@@ -249,14 +263,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
 ]
 
-# نطاق Render للـ backend (نفس أصل الـ admin)
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
-# نطاقات الواجهات الأمامية (الموقع العام + لوحة التحكم)
 CSRF_TRUSTED_ORIGINS += CORS_ALLOWED_ORIGINS
-
-# إزالة التكرار
 CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
 
 
